@@ -182,11 +182,14 @@
             shadow.position.z = -PT / 2 - 0.002;
             photoGroup.add(shadow);
 
-            // Stack along Z so front photo covers the ones behind (no z-fighting)
-            photoGroup.position.x = 0;
-            photoGroup.position.y = 0;
+            // Stack along Z with slight random X/Y offsets (messy pile look)
+            const messX = (Math.random() - 0.5) * 0.15;
+            const messY = (Math.random() - 0.5) * 0.1;
+            const messRot = (Math.random() - 0.5) * 0.06;
+            photoGroup.position.x = messX;
+            photoGroup.position.y = messY;
             photoGroup.position.z = -i * 0.06;
-            photoGroup.rotation.z = 0;
+            photoGroup.rotation.z = messRot;
             photoGroup.rotation.y = 0;
 
             // Fan: 4x2 grid covering the view plane
@@ -198,10 +201,10 @@
             const fanY = (row - 0.5) * -gridH;
 
             photoGroup.userData = {
-                stackX: 0,
-                stackY: 0,
+                stackX: messX,
+                stackY: messY,
                 stackZ: -i * 0.06,
-                stackRotZ: 0,
+                stackRotZ: messRot,
                 stackRotY: 0,
                 fanX: fanX,
                 fanY: fanY,
@@ -246,10 +249,10 @@
         scene.add(fillLight);
 
         // --- CAMERA ---
-        let camDist = 5;
-        const camBase = 5;
+        let camDist = 6;
+        const camBase = 6;
         const camFan = 12;
-        camera.position.set(0, camDist * 0.3, camDist);
+        camera.position.set(camDist * 0.5, camDist * 0.4, camDist * 0.7);
         camera.lookAt(0, 0, 0);
 
         // --- INTERACTION ---
