@@ -75,13 +75,12 @@
         'use strict';
 
         // --- CONFIGURATION ---
-        // Auto-detect photo count: tries loading foto1.jpg, foto2.jpg, etc.
-        // until one fails to load. Supports up to 200 photos.
         const MAX_PHOTOS = 200;
-        const PW = 3.0;   // photo width
-        const PH = 2.0;   // photo height
-        const PT = 0.02;  // photo thickness
-        const STACK_GAP = 0.02; // gap between stacked photos
+        const MAX_SIDE = 2.5;  // longest side of any card
+        const PT = 0.02;       // photo thickness
+        const STACK_GAP = 0.02;
+        const CELL_W = 3.2;    // fan grid cell width (fits widest card + margin)
+        const CELL_H = 3.2;    // fan grid cell height (fits tallest card + margin)
 
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x0a0a0f, 0.015);
@@ -93,111 +92,144 @@
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 0.9;
 
-        // --- BACK TEXTURE ---
-        function createBackTexture() {
+        // --- BACK TEXTURE (generated per card size) ---
+        function createBackTexture(w, h) {
             const cv = document.createElement('canvas');
-            cv.width = 512; cv.height = 340;
+            cv.width = Math.round(w * 200); cv.height = Math.round(h * 200);
             const ctx = cv.getContext('2d');
             ctx.fillStyle = '#f8f5f0';
-            ctx.fillRect(0, 0, 512, 340);
-            for (let i = 0; i < 500; i++) {
+            ctx.fillRect(0, 0, cv.width, cv.height);
+            for (let i = 0; i < 300; i++) {
                 ctx.fillStyle = `rgba(${200+Math.random()*30},${195+Math.random()*30},${185+Math.random()*30},0.3)`;
-                ctx.fillRect(Math.random()*512, Math.random()*340, 2, 2);
+                ctx.fillRect(Math.random()*cv.width, Math.random()*cv.height, 2, 2);
             }
             ctx.fillStyle = 'rgba(180,160,140,0.3)';
             ctx.textAlign = 'center';
-            ctx.font = '14px monospace';
-            ctx.fillText('PRODUCCIONES FORO 7', 256, 153);
-            ctx.font = '10px monospace';
-            ctx.fillText('Papel Premium \u00B7 300 DPI', 256, 187);
-            return new THREE.CanvasTexture(cv);
-        }
-        const backTex = createBackTexture();
-
-        // --- PLACEHOLDER TEXTURE (while loading) ---
-        function createPlaceholderTexture(index) {
-            const cv = document.createElement('canvas');
-            cv.width = 256; cv.height = 170;
-            const ctx = cv.getContext('2d');
-            // Soft gradient
-            const hue = (index * 37) % 360;
-            ctx.fillStyle = `hsl(${hue}, 20%, 75%)`;
-            ctx.fillRect(0, 0, 256, 170);
-            ctx.fillStyle = `hsl(${hue}, 25%, 65%)`;
-            ctx.fillRect(0, 85, 256, 85);
-            ctx.fillStyle = 'rgba(0,0,0,0.15)';
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 28px monospace';
-            ctx.fillText(`${index + 1}`, 128, 95);
+            ctx.font = `${Math.round(cv.width*0.028)}px monospace`;
+            ctx.fillText('PRODUCCIONES FORO 7', cv.width/2, cv.height*0.45);
+            ctx.font = `${Math.round(cv.width*0.02)}px monospace`;
+            ctx.fillText('Papel Premium \u00B7 300 DPI', cv.width/2, cv.height*0.55);
             return new THREE.CanvasTexture(cv);
         }
 
-        // --- PHOTO DETECTION & LOADING ---
+        // --- PHOTO LOADING ---
         const photosGroup = new THREE.Group();
         const photos = [];
-        let photoCount = 0;
         let loadedCount = 0;
 
         function computeFanLayout(count) {
-            // Determine grid columns: aim for roughly 4:3 aspect ratio of grid
             let cols = Math.ceil(Math.sqrt(count * 1.5));
             if (cols < 2) cols = 2;
             let rows = Math.ceil(count / cols);
             return { cols, rows };
         }
 
-        function createPhotoCard(index, texture) {
+        // Card dimensions from image aspect ratio
+        function cardSize(imgW, imgH) {
+            const aspect = imgW / imgH;
+            let cw, ch;
+            if (aspect >= 1) {
+                // Landscape or square
+                cw = MAX_SIDE;
+                ch = MAX_SIDE / aspect;
+            } else {
+                // Portrait
+                ch = MAX_SIDE;
+                cw = MAX_SIDE * aspect;
+            }
+            return { cw, ch };
+        }
+
+        function createPhotoCard(cw, ch, texture) {
             const photoGroup = new THREE.Group();
 
-            // White card
-            const cardGeo = new THREE.BoxGeometry(PW, PH, PT);
+            // White card sized to image proportion
+            const cardGeo = new THREE.BoxGeometry(cw, ch, PT);
             const whiteMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const bTex = createBackTexture(cw, ch);
             const card = new THREE.Mesh(cardGeo, [
                 whiteMat, whiteMat, whiteMat, whiteMat,
                 whiteMat,
-                new THREE.MeshPhongMaterial({ map: backTex })
+                new THREE.MeshPhongMaterial({ map: bTex })
             ]);
             photoGroup.add(card);
 
-            // Photo image on front
-            const borderPx = 0.08;
-            const imgW = PW - borderPx * 2;
-            const imgH = PH - borderPx * 2.5;
+            // Photo image on front (with small border)
+            const border = 0.07;
+            const imgW = cw - border * 2;
+            const imgH = ch - border * 2.5;
             const imgGeo = new THREE.PlaneGeometry(imgW, imgH);
             const imgMat = new THREE.MeshPhongMaterial({ map: texture });
             const imgMesh = new THREE.Mesh(imgGeo, imgMat);
             imgMesh.position.z = PT / 2 + 0.001;
-            imgMesh.position.y = borderPx * 0.25;
+            imgMesh.position.y = border * 0.25;
             photoGroup.add(imgMesh);
-
-            // Store image mesh ref for texture updates
-            photoGroup.userData.imgMesh = imgMesh;
 
             return photoGroup;
         }
 
-        function buildStack(count) {
-            photoCount = count;
-            const { cols, rows } = computeFanLayout(count);
-            const gridW = PW * 1.05;
-            const gridH = PH * 1.05;
+        // Load all images first, then build 3D scene
+        function loadAllImages(count, onProgress, onDone) {
+            const images = new Array(count).fill(null);
+            let loaded = 0;
+
+            function checkDone() {
+                loaded++;
+                onProgress(loaded, count);
+                if (loaded >= count) onDone(images);
+            }
 
             for (let i = 0; i < count; i++) {
-                const placeholder = createPlaceholderTexture(i);
-                const photoGroup = createPhotoCard(i, placeholder);
+                const img = new Image();
+                const idx = i;
+                img.onload = function() { images[idx] = img; checkDone(); };
+                img.onerror = function() { images[idx] = null; checkDone(); };
+                img.src = `fotos/foto${i + 1}.jpg`;
+            }
+        }
+
+        function buildScene(images) {
+            const count = images.length;
+            const { cols, rows } = computeFanLayout(count);
+
+            for (let i = 0; i < count; i++) {
+                const img = images[i];
+                let cw, ch, tex;
+
+                if (img) {
+                    const size = cardSize(img.width, img.height);
+                    cw = size.cw; ch = size.ch;
+                    tex = new THREE.Texture(img);
+                    tex.needsUpdate = true;
+                } else {
+                    // Fallback placeholder
+                    cw = MAX_SIDE; ch = MAX_SIDE / 1.5;
+                    const cv = document.createElement('canvas');
+                    cv.width = 256; cv.height = 170;
+                    const ctx = cv.getContext('2d');
+                    const hue = (i * 37) % 360;
+                    ctx.fillStyle = `hsl(${hue}, 20%, 75%)`;
+                    ctx.fillRect(0, 0, 256, 170);
+                    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                    ctx.textAlign = 'center';
+                    ctx.font = 'bold 28px monospace';
+                    ctx.fillText(`${i + 1}`, 128, 95);
+                    tex = new THREE.CanvasTexture(cv);
+                }
+
+                const photoGroup = createPhotoCard(cw, ch, tex);
 
                 const messRotZ = (Math.random() - 0.5) * 0.12;
                 photoGroup.position.set(0, 0, -i * STACK_GAP);
                 photoGroup.rotation.set(0, 0, messRotZ);
 
-                // Fan position: grid layout
+                // Fan grid position
                 const col = i % cols;
                 const row = Math.floor(i / cols);
-                const fanX = (col - (cols - 1) / 2) * gridW;
-                const fanY = ((rows - 1) / 2 - row) * gridH;
+                const fanX = (col - (cols - 1) / 2) * CELL_W;
+                const fanY = ((rows - 1) / 2 - row) * CELL_H;
 
                 photoGroup.userData = {
-                    ...photoGroup.userData,
                     index: i,
                     stackX: 0, stackY: 0, stackZ: -i * STACK_GAP,
                     stackRotX: 0, stackRotY: 0, stackRotZ: messRotZ,
@@ -211,12 +243,12 @@
 
             scene.add(photosGroup);
 
-            // Update counter
+            // Counter
             document.getElementById('photo-counter').textContent =
                 `${count} FOTOS \u00B7 PAPEL PREMIUM \u00B7 300 DPI`;
 
-            // Adjust camera distance based on photo count
-            const maxDim = Math.max(cols * gridW, rows * gridH);
+            // Camera
+            const maxDim = Math.max(cols * CELL_W, rows * CELL_H);
             camFan = maxDim * 1.1 + 2;
             camBase = Math.max(4, 2 + count * 0.03);
             camDist = camBase;
@@ -224,114 +256,13 @@
             camera.lookAt(0, 0, 0);
         }
 
-        // Load real photos progressively (replaces placeholders)
-        function loadPhotosProgressive(count) {
-            const loadBar = document.getElementById('loading-bar');
-            const loadFill = document.getElementById('load-fill');
-            const loadText = document.getElementById('load-text');
-            loadText.textContent = `0 / ${count}`;
-
-            let batch = 0;
-            const BATCH_SIZE = 5; // load 5 at a time
-
-            function loadBatch() {
-                const start = batch * BATCH_SIZE;
-                const end = Math.min(start + BATCH_SIZE, count);
-                let pending = end - start;
-                if (pending <= 0) {
-                    loadBar.style.opacity = '0';
-                    setTimeout(() => loadBar.style.display = 'none', 500);
-                    return;
-                }
-
-                for (let i = start; i < end; i++) {
-                    const img = new Image();
-                    const idx = i;
-                    img.onload = function() {
-                        // Cover crop: fit image to card aspect ratio without distortion
-                        const cardAspect = PW / PH; // 3:2 = 1.5
-                        const imgAspect = img.width / img.height;
-                        const cv = document.createElement('canvas');
-                        cv.width = 768; cv.height = 512; // matches card aspect 3:2
-                        const ctx = cv.getContext('2d');
-                        let sx, sy, sw, sh;
-                        if (imgAspect > cardAspect) {
-                            // Image is wider: crop sides
-                            sh = img.height;
-                            sw = sh * cardAspect;
-                            sx = (img.width - sw) / 2;
-                            sy = 0;
-                        } else {
-                            // Image is taller: crop top/bottom
-                            sw = img.width;
-                            sh = sw / cardAspect;
-                            sx = 0;
-                            sy = (img.height - sh) / 2;
-                        }
-                        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 768, 512);
-                        const tex = new THREE.CanvasTexture(cv);
-                        // Replace placeholder texture
-                        if (photos[idx]) {
-                            const imgMesh = photos[idx].userData.imgMesh;
-                            if (imgMesh) {
-                                imgMesh.material.map = tex;
-                                imgMesh.material.needsUpdate = true;
-                            }
-                        }
-                        loadedCount++;
-                        const pct = Math.round((loadedCount / count) * 100);
-                        loadFill.style.width = pct + '%';
-                        loadText.textContent = `${loadedCount} / ${count}`;
-                        pending--;
-                        if (pending <= 0) {
-                            batch++;
-                            // Small delay between batches to not overwhelm
-                            setTimeout(loadBatch, 50);
-                        }
-                    };
-                    img.onerror = function() {
-                        loadedCount++;
-                        const pct = Math.round((loadedCount / count) * 100);
-                        loadFill.style.width = pct + '%';
-                        loadText.textContent = `${loadedCount} / ${count}`;
-                        pending--;
-                        if (pending <= 0) {
-                            batch++;
-                            setTimeout(loadBatch, 50);
-                        }
-                    };
-                    img.src = `fotos/foto${i + 1}.jpg`;
-                }
-            }
-            loadBatch();
-        }
-
-        // --- AUTO-DETECT PHOTO COUNT ---
-        // Probe how many foto*.jpg files exist by loading them
+        // Auto-detect photo count
         function detectPhotoCount(callback) {
-            let count = 0;
-            let checking = 0;
-            let maxFound = 0;
-
-            // Quick probe: check in chunks to find the range fast
             function probe(n) {
-                if (n > MAX_PHOTOS) {
-                    // Done probing, now find exact count
-                    callback(maxFound);
-                    return;
-                }
-                checking++;
+                if (n > MAX_PHOTOS) { callback(n - 1); return; }
                 const img = new Image();
-                img.onload = function() {
-                    if (n > maxFound) maxFound = n;
-                    checking--;
-                    probe(n + 1);
-                };
-                img.onerror = function() {
-                    checking--;
-                    // Found the gap - this is our count
-                    callback(n - 1);
-                };
+                img.onload = function() { probe(n + 1); };
+                img.onerror = function() { callback(n - 1); };
                 img.src = `fotos/foto${n}.jpg`;
             }
             probe(1);
@@ -438,10 +369,26 @@
         });
 
         // --- START ---
+        const loadBar = document.getElementById('loading-bar');
+        const loadFill = document.getElementById('load-fill');
+        const loadText = document.getElementById('load-text');
+
         detectPhotoCount(count => {
-            if (count < 1) count = 8; // fallback
-            buildStack(count);
-            loadPhotosProgressive(count);
+            if (count < 1) count = 8;
+            loadText.textContent = `0 / ${count}`;
+
+            loadAllImages(count,
+                (loaded, total) => {
+                    const pct = Math.round((loaded / total) * 100);
+                    loadFill.style.width = pct + '%';
+                    loadText.textContent = `${loaded} / ${total}`;
+                },
+                (images) => {
+                    buildScene(images);
+                    loadBar.style.opacity = '0';
+                    setTimeout(() => loadBar.style.display = 'none', 500);
+                }
+            );
         });
 
     })();
