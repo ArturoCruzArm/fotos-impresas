@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotos Impresas XV Naomi - Producciones Foro 7</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Crect x='5' y='7' width='16' height='12' rx='1' fill='%23f5f0e8' stroke='%23d4af37' stroke-width='0.5' transform='rotate(-5 13 13)'/%3E%3Crect x='8' y='9' width='16' height='12' rx='1' fill='%23fff8f0' stroke='%23d4af37' stroke-width='0.5' transform='rotate(3 16 15)'/%3E%3Crect x='11' y='11' width='16' height='12' rx='1' fill='%23ffffff' stroke='%23d4af37' stroke-width='0.5'/%3E%3Crect x='13' y='13' width='12' height='8' rx='0.5' fill='%23ddd0f0'/%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #title-overlay {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            color: rgba(212,175,55,0.6); font-size: 11px; letter-spacing: 4px;
+            font-family: monospace; text-transform: uppercase;
+            pointer-events: none; text-align: center;
+        }
+        #title-overlay .sub {
+            display: block; font-size: 9px; color: rgba(255,255,255,0.3);
+            letter-spacing: 2px; margin-top: 4px;
+        }
+        #fan-btn {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3);
+            color: #d4af37; padding: 10px 28px; border-radius: 8px;
+            font-family: monospace; font-size: 12px; letter-spacing: 3px;
+            text-transform: uppercase; cursor: pointer; transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        #fan-btn:hover { background: rgba(212,175,55,0.2); border-color: rgba(212,175,55,0.5); }
+        #photo-counter {
+            position: fixed; bottom: 65px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.3); font-size: 10px; letter-spacing: 2px;
+            font-family: monospace; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div id="title-overlay">
+        Fotos Impresas Premium
+        <span class="sub">Producciones Foro 7</span>
+    </div>
+    <div id="photo-counter">50 FOTOS · PAPEL PREMIUM · 300 DPI</div>
+    <button id="fan-btn">Abanico</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0a0a0f, 0.03);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.9;
+
+        // --- PHOTO DIMENSIONS ---
+        const PW = 3.0;  // photo width (landscape)
+        const PH = 2.0;  // photo height
+        const PT = 0.02; // photo thickness
+        const PHOTO_COUNT = 8;
+
+        // --- TEXTURES ---
+        const photoColors = [
+            '#ddd0f0', '#d0e8f0', '#f0d5d0', '#d0f0d8',
+            '#f0e0d0', '#d8d0f0', '#f0d0e0', '#d0f0f0'
+        ];
+        const photoLabels = [
+            'Ceremonia', 'Recepcion', 'Vals', 'Brindis',
+            'Familia', 'Amigas', 'Decoracion', 'Retrato'
+        ];
+
+        function createPhotoTexture(w, h, color, label, index) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+
+            // White border (photo print)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+
+            // Image area
+            const border = 20;
+            ctx.fillStyle = color;
+            ctx.fillRect(border, border, w - border * 2, h - border * 2.5);
+
+            // Subtle gradient on image to simulate photo
+            const grad = ctx.createLinearGradient(border, border, w - border, h - border * 2.5);
+            grad.addColorStop(0, 'rgba(255,255,255,0.1)');
+            grad.addColorStop(0.5, 'rgba(0,0,0,0.05)');
+            grad.addColorStop(1, 'rgba(255,255,255,0.08)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(border, border, w - border * 2, h - border * 2.5);
+
+            // Photo placeholder icon
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            ctx.font = `${w * 0.15}px Georgia`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const icons = ['🏰', '🎉', '💃', '🥂', '👨‍👩‍👧', '👭', '🌸', '👸'];
+            ctx.fillText(icons[index] || '📷', w / 2, h * 0.4);
+
+            // Label at bottom
+            ctx.fillStyle = 'rgba(100,80,60,0.5)';
+            ctx.font = `${w * 0.04}px monospace`;
+            ctx.fillText(label, w / 2, h - border * 0.8);
+
+            // Number
+            ctx.fillStyle = 'rgba(150,130,110,0.4)';
+            ctx.font = `${w * 0.03}px monospace`;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${index + 1}/${PHOTO_COUNT}`, w - border, h - border * 0.8);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createBackTexture(w, h) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f8f5f0';
+            ctx.fillRect(0, 0, w, h);
+
+            // Subtle paper texture
+            for (let i = 0; i < 500; i++) {
+                ctx.fillStyle = `rgba(${200+Math.random()*30},${195+Math.random()*30},${185+Math.random()*30},0.3)`;
+                ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+            }
+
+            // Back stamp
+            ctx.fillStyle = 'rgba(180,160,140,0.3)';
+            ctx.textAlign = 'center';
+            ctx.font = '14px monospace';
+            ctx.fillText('PRODUCCIONES FORO 7', w/2, h * 0.45);
+            ctx.font = '10px monospace';
+            ctx.fillText('Papel Premium · 300 DPI', w/2, h * 0.55);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const backTex = createBackTexture(512, 340);
+
+        // --- CREATE PHOTOS ---
+        const photosGroup = new THREE.Group();
+        const photos = [];
+
+        for (let i = 0; i < PHOTO_COUNT; i++) {
+            const photoGroup = new THREE.Group();
+
+            const frontTex = createPhotoTexture(512, 340, photoColors[i], photoLabels[i], i);
+
+            // Photo card (thin box)
+            const cardGeo = new THREE.BoxGeometry(PW, PH, PT);
+            const materials = [
+                new THREE.MeshPhongMaterial({ color: 0xffffff }), // right
+                new THREE.MeshPhongMaterial({ color: 0xffffff }), // left
+                new THREE.MeshPhongMaterial({ color: 0xffffff }), // top
+                new THREE.MeshPhongMaterial({ color: 0xffffff }), // bottom
+                new THREE.MeshPhongMaterial({ map: frontTex }),    // front
+                new THREE.MeshPhongMaterial({ map: backTex }),     // back
+            ];
+            const card = new THREE.Mesh(cardGeo, materials);
+            photoGroup.add(card);
+
+            // Subtle shadow edge
+            const shadowGeo = new THREE.PlaneGeometry(PW + 0.05, PH + 0.05);
+            const shadowMat = new THREE.MeshPhongMaterial({
+                color: 0x000000, transparent: true, opacity: 0.1, side: THREE.BackSide
+            });
+            const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+            shadow.position.z = -PT / 2 - 0.002;
+            photoGroup.add(shadow);
+
+            // Stack position (stacked with slight offsets)
+            photoGroup.position.y = i * (PT + 0.005);
+            photoGroup.rotation.z = (Math.random() - 0.5) * 0.03;
+            photoGroup.rotation.y = (Math.random() - 0.5) * 0.02;
+
+            // Store original and fan target positions
+            photoGroup.userData = {
+                stackY: i * (PT + 0.005),
+                stackRotZ: photoGroup.rotation.z,
+                stackRotY: photoGroup.rotation.y,
+                stackX: 0,
+                fanX: (i - PHOTO_COUNT / 2 + 0.5) * 0.6,
+                fanY: Math.abs(i - PHOTO_COUNT / 2 + 0.5) * -0.1,
+                fanRotZ: (i - PHOTO_COUNT / 2 + 0.5) * 0.08,
+                fanRotY: 0,
+            };
+
+            photos.push(photoGroup);
+            photosGroup.add(photoGroup);
+        }
+
+        scene.add(photosGroup);
+
+        // --- FAN ANIMATION ---
+        let isFanned = false;
+        let fanProgress = 0;
+        let targetFanProgress = 0;
+
+        function toggleFan() {
+            isFanned = !isFanned;
+            targetFanProgress = isFanned ? 1 : 0;
+            document.getElementById('fan-btn').textContent = isFanned ? 'Apilar' : 'Abanico';
+        }
+
+        document.getElementById('fan-btn').addEventListener('click', toggleFan);
+
+        // --- LIGHTS ---
+        const ambLight = new THREE.AmbientLight(0x606070, 0.5);
+        scene.add(ambLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        mainLight.position.set(3, 5, 4);
+        scene.add(mainLight);
+
+        const warmLight = new THREE.PointLight(0xd4af37, 0.2, 15);
+        warmLight.position.set(-3, 2, 3);
+        scene.add(warmLight);
+
+        const fillLight = new THREE.PointLight(0x8888cc, 0.3, 15);
+        fillLight.position.set(2, -1, -3);
+        scene.add(fillLight);
+
+        // --- CAMERA ---
+        const camDist = 5.5;
+        camera.position.set(camDist * 0.3, camDist * 0.6, camDist * 0.7);
+        camera.lookAt(0, 0, 0);
+
+        // --- INTERACTION ---
+        let rotX = -0.4, rotY = 0.3;
+        let targetRotX = rotX, targetRotY = rotY;
+        let isDragging = false;
+        let dragStartX = 0, dragStartY = 0;
+
+        function onPointerDown(x, y) { isDragging = true; dragStartX = x; dragStartY = y; }
+        function onPointerMove(x, y) {
+            if (!isDragging) return;
+            targetRotY += (x - dragStartX) * 0.006;
+            targetRotX += (y - dragStartY) * 0.006;
+            targetRotX = Math.max(-1.2, Math.min(0.5, targetRotX));
+            dragStartX = x; dragStartY = y;
+        }
+        function onPointerUp() { isDragging = false; }
+
+        document.addEventListener('mousedown', e => onPointerDown(e.clientX, e.clientY));
+        document.addEventListener('mousemove', e => onPointerMove(e.clientX, e.clientY));
+        document.addEventListener('mouseup', onPointerUp);
+        document.addEventListener('touchstart', e => { e.preventDefault(); onPointerDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+        document.addEventListener('touchmove', e => { e.preventDefault(); onPointerMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+        document.addEventListener('touchend', onPointerUp);
+
+        document.addEventListener('wheel', e => {
+            e.preventDefault();
+            camera.position.multiplyScalar(e.deltaY > 0 ? 1.05 : 0.95);
+            const d = camera.position.length();
+            if (d < 2.5) camera.position.setLength(2.5);
+            if (d > 10) camera.position.setLength(10);
+        }, { passive: false });
+
+        // --- ANIMATE ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            rotX += (targetRotX - rotX) * 0.08;
+            rotY += (targetRotY - rotY) * 0.08;
+            photosGroup.rotation.x = rotX;
+            photosGroup.rotation.y = rotY;
+
+            // Fan animation
+            fanProgress += (targetFanProgress - fanProgress) * 0.05;
+
+            photos.forEach((p, i) => {
+                const d = p.userData;
+                const t = fanProgress;
+                p.position.x = d.stackX * (1 - t) + d.fanX * t;
+                p.position.y = d.stackY * (1 - t) + d.fanY * t;
+                p.rotation.z = d.stackRotZ * (1 - t) + d.fanRotZ * t;
+                p.rotation.y = d.stackRotY * (1 - t) + d.fanRotY * t;
+            });
+
+            // Gentle float
+            photosGroup.position.y = Math.sin(Date.now() * 0.001) * 0.04;
+
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- RESIZE ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    })();
+    </script>
+</body>
+</html>
