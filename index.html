@@ -182,13 +182,14 @@
             shadow.position.z = -PT / 2 - 0.002;
             photoGroup.add(shadow);
 
-            // Stack along Z, all photos parallel (no rotation)
+            // Stack along Z with slight random Z-rotation per photo
+            const messRotZ = (Math.random() - 0.5) * 0.12;
             photoGroup.position.x = 0;
             photoGroup.position.y = 0;
             photoGroup.position.z = -i * 0.02;
             photoGroup.rotation.x = 0;
             photoGroup.rotation.y = 0;
-            photoGroup.rotation.z = 0;
+            photoGroup.rotation.z = messRotZ;
 
             // Fan: 4x2 grid covering the view plane
             const col = i % 4;
@@ -204,7 +205,7 @@
                 stackZ: -i * 0.02,
                 stackRotX: 0,
                 stackRotY: 0,
-                stackRotZ: 0,
+                stackRotZ: messRotZ,
                 fanX: fanX,
                 fanY: fanY,
                 fanZ: 0,
