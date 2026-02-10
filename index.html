@@ -182,27 +182,27 @@
             shadow.position.z = -PT / 2 - 0.002;
             photoGroup.add(shadow);
 
-            // Stack position (clean stack, no rotation to avoid clipping)
-            photoGroup.position.y = i * (PT + 0.008);
+            // Stack along Z so front photo covers the ones behind (no z-fighting)
             photoGroup.position.x = 0;
-            photoGroup.position.z = 0;
+            photoGroup.position.y = 0;
+            photoGroup.position.z = -i * 0.06;
             photoGroup.rotation.z = 0;
             photoGroup.rotation.y = 0;
 
             // Fan: 4x2 grid covering the view plane
             const col = i % 4;
             const row = Math.floor(i / 4);
-            const gridW = PW * 1.05; // slight gap between columns
-            const gridH = PH * 1.05; // slight gap between rows
+            const gridW = PW * 1.05;
+            const gridH = PH * 1.05;
             const fanX = (col - 1.5) * gridW;
             const fanY = (row - 0.5) * -gridH;
 
             photoGroup.userData = {
-                stackY: i * (PT + 0.008),
+                stackX: 0,
+                stackY: 0,
+                stackZ: -i * 0.06,
                 stackRotZ: 0,
                 stackRotY: 0,
-                stackX: 0,
-                stackZ: 0,
                 fanX: fanX,
                 fanY: fanY,
                 fanZ: 0,
