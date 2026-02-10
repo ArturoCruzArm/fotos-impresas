@@ -182,18 +182,13 @@
             shadow.position.z = -PT / 2 - 0.002;
             photoGroup.add(shadow);
 
-            // Stack along Z with random offsets in all axes (natural pile)
-            const messX = (Math.random() - 0.5) * 0.25;
-            const messY = (Math.random() - 0.5) * 0.2;
-            const messRotX = (Math.random() - 0.5) * 0.08;
-            const messRotY = (Math.random() - 0.5) * 0.08;
-            const messRotZ = (Math.random() - 0.5) * 0.1;
-            photoGroup.position.x = messX;
-            photoGroup.position.y = messY;
+            // Stack along Z, all photos parallel (no rotation)
+            photoGroup.position.x = 0;
+            photoGroup.position.y = 0;
             photoGroup.position.z = -i * 0.06;
-            photoGroup.rotation.x = messRotX;
-            photoGroup.rotation.y = messRotY;
-            photoGroup.rotation.z = messRotZ;
+            photoGroup.rotation.x = 0;
+            photoGroup.rotation.y = 0;
+            photoGroup.rotation.z = 0;
 
             // Fan: 4x2 grid covering the view plane
             const col = i % 4;
@@ -204,12 +199,12 @@
             const fanY = (row - 0.5) * -gridH;
 
             photoGroup.userData = {
-                stackX: messX,
-                stackY: messY,
+                stackX: 0,
+                stackY: 0,
                 stackZ: -i * 0.06,
-                stackRotX: messRotX,
-                stackRotY: messRotY,
-                stackRotZ: messRotZ,
+                stackRotX: 0,
+                stackRotY: 0,
+                stackRotZ: 0,
                 fanX: fanX,
                 fanY: fanY,
                 fanZ: 0,
@@ -261,7 +256,7 @@
         camera.lookAt(0, 0, 0);
 
         // --- INTERACTION ---
-        let rotX = -0.4, rotY = 0.3;
+        let rotX = -0.6, rotY = 0.6;
         let targetRotX = rotX, targetRotY = rotY;
         let isDragging = false;
         let dragStartX = 0, dragStartY = 0;
