@@ -77,35 +77,7 @@
             'fotos/foto5.jpg', 'fotos/foto6.jpg', 'fotos/foto7.jpg', 'fotos/foto8.jpg'
         ];
 
-        // Create photo texture with white border frame using real image
-        function createPhotoTexture(imgSrc, index) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 340;
-            const ctx = canvas.getContext('2d');
-            const border = 16;
-
-            // White photo paper
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, 512, 340);
-
-            // Number at bottom
-            ctx.fillStyle = 'rgba(150,130,110,0.4)';
-            ctx.font = '10px monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText((index + 1) + '/' + PHOTO_COUNT + '  Producciones Foro 7', 256, 332);
-
-            const tex = new THREE.CanvasTexture(canvas);
-
-            // Load real image and draw it inside the border
-            const img = new Image();
-            img.onload = function() {
-                ctx.drawImage(img, border, border, 512 - border * 2, 340 - border * 2 - 12);
-                tex.needsUpdate = true;
-            };
-            img.src = imgSrc;
-
-            return tex;
-        }
+        const loader = new THREE.TextureLoader();
 
         function createBackTexture() {
             const canvas = document.createElement('canvas');
@@ -138,29 +110,23 @@
         for (let i = 0; i < PHOTO_COUNT; i++) {
             const photoGroup = new THREE.Group();
 
-            const frontTex = createPhotoTexture(photoFiles[i], i);
-
-            // Photo card (thin box)
+            // White photo card (border frame)
             const cardGeo = new THREE.BoxGeometry(PW, PH, PT);
-            const materials = [
-                new THREE.MeshPhongMaterial({ color: 0xffffff }), // right
-                new THREE.MeshPhongMaterial({ color: 0xffffff }), // left
-                new THREE.MeshPhongMaterial({ color: 0xffffff }), // top
-                new THREE.MeshPhongMaterial({ color: 0xffffff }), // bottom
-                new THREE.MeshPhongMaterial({ map: frontTex }),    // front
-                new THREE.MeshPhongMaterial({ map: backTex }),     // back
-            ];
-            const card = new THREE.Mesh(cardGeo, materials);
+            const whiteMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const card = new THREE.Mesh(cardGeo, [whiteMat, whiteMat, whiteMat, whiteMat, whiteMat, new THREE.MeshPhongMaterial({ map: backTex })]);
             photoGroup.add(card);
 
-            // Subtle shadow edge
-            const shadowGeo = new THREE.PlaneGeometry(PW + 0.05, PH + 0.05);
-            const shadowMat = new THREE.MeshPhongMaterial({
-                color: 0x000000, transparent: true, opacity: 0.1, side: THREE.BackSide
-            });
-            const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-            shadow.position.z = -PT / 2 - 0.002;
-            photoGroup.add(shadow);
+            // Real photo image on front (slightly smaller, sits on top of white card)
+            const borderPx = 0.08;
+            const imgW = PW - borderPx * 2;
+            const imgH = PH - borderPx * 2.5;
+            const imgGeo = new THREE.PlaneGeometry(imgW, imgH);
+            const imgTex = loader.load(photoFiles[i]);
+            const imgMat = new THREE.MeshPhongMaterial({ map: imgTex });
+            const imgMesh = new THREE.Mesh(imgGeo, imgMat);
+            imgMesh.position.z = PT / 2 + 0.001;
+            imgMesh.position.y = borderPx * 0.25;
+            photoGroup.add(imgMesh);
 
             // Stack along Z with slight random Z-rotation per photo
             const messRotZ = (Math.random() - 0.5) * 0.12;
