@@ -76,11 +76,12 @@
 
         // --- CONFIGURATION ---
         const MAX_PHOTOS = 200;
-        const MAX_SIDE = 2.5;  // longest side of any card
-        const PT = 0.02;       // photo thickness
+        const H_W = 3.0, H_H = 2.0;  // horizontal card (landscape)
+        const V_W = 2.0, V_H = 3.0;  // vertical card (portrait)
+        const PT = 0.02;
         const STACK_GAP = 0.02;
-        const CELL_W = 3.2;    // fan grid cell width (fits widest card + margin)
-        const CELL_H = 3.2;    // fan grid cell height (fits tallest card + margin)
+        const CELL_W = 3.3;   // fan grid cell (fits any orientation + margin)
+        const CELL_H = 3.3;
 
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x0a0a0f, 0.015);
@@ -124,20 +125,32 @@
             return { cols, rows };
         }
 
-        // Card dimensions from image aspect ratio
-        function cardSize(imgW, imgH) {
-            const aspect = imgW / imgH;
-            let cw, ch;
-            if (aspect >= 1) {
-                // Landscape or square
-                cw = MAX_SIDE;
-                ch = MAX_SIDE / aspect;
+        // Two standard orientations like real printed photos
+        function isPortrait(imgW, imgH) {
+            return imgH > imgW;
+        }
+
+        // Cover crop: draw image centered into target aspect, no distortion
+        function coverCrop(img, targetW, targetH) {
+            const targetAspect = targetW / targetH;
+            const imgAspect = img.width / img.height;
+            const cv = document.createElement('canvas');
+            cv.width = 768; cv.height = Math.round(768 / targetAspect);
+            const ctx = cv.getContext('2d');
+            let sx, sy, sw, sh;
+            if (imgAspect > targetAspect) {
+                sh = img.height;
+                sw = sh * targetAspect;
+                sx = (img.width - sw) / 2;
+                sy = 0;
             } else {
-                // Portrait
-                ch = MAX_SIDE;
-                cw = MAX_SIDE * aspect;
+                sw = img.width;
+                sh = sw / targetAspect;
+                sx = 0;
+                sy = (img.height - sh) / 2;
             }
-            return { cw, ch };
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+            return new THREE.CanvasTexture(cv);
         }
 
         function createPhotoCard(cw, ch, texture) {
@@ -197,23 +210,25 @@
                 let cw, ch, tex;
 
                 if (img) {
-                    const size = cardSize(img.width, img.height);
-                    cw = size.cw; ch = size.ch;
-                    tex = new THREE.Texture(img);
-                    tex.needsUpdate = true;
+                    // Pick orientation: vertical or horizontal
+                    const portrait = isPortrait(img.width, img.height);
+                    cw = portrait ? V_W : H_W;
+                    ch = portrait ? V_H : H_H;
+                    // Cover crop to fit card without distortion
+                    tex = coverCrop(img, cw, ch);
                 } else {
-                    // Fallback placeholder
-                    cw = MAX_SIDE; ch = MAX_SIDE / 1.5;
+                    // Fallback placeholder (horizontal)
+                    cw = H_W; ch = H_H;
                     const cv = document.createElement('canvas');
-                    cv.width = 256; cv.height = 170;
+                    cv.width = 300; cv.height = 200;
                     const ctx = cv.getContext('2d');
                     const hue = (i * 37) % 360;
                     ctx.fillStyle = `hsl(${hue}, 20%, 75%)`;
-                    ctx.fillRect(0, 0, 256, 170);
+                    ctx.fillRect(0, 0, 300, 200);
                     ctx.fillStyle = 'rgba(0,0,0,0.15)';
                     ctx.textAlign = 'center';
                     ctx.font = 'bold 28px monospace';
-                    ctx.fillText(`${i + 1}`, 128, 95);
+                    ctx.fillText(`${i + 1}`, 150, 110);
                     tex = new THREE.CanvasTexture(cv);
                 }
 
