@@ -193,9 +193,11 @@
                 stackRotZ: photoGroup.rotation.z,
                 stackRotY: photoGroup.rotation.y,
                 stackX: 0,
-                fanX: (i - PHOTO_COUNT / 2 + 0.5) * 0.6,
-                fanY: Math.abs(i - PHOTO_COUNT / 2 + 0.5) * -0.1,
-                fanRotZ: (i - PHOTO_COUNT / 2 + 0.5) * 0.08,
+                stackZ: 0,
+                fanX: (i - PHOTO_COUNT / 2 + 0.5) * (PW + 0.15),
+                fanY: 0,
+                fanZ: 0,
+                fanRotZ: 0,
                 fanRotY: 0,
             };
 
@@ -235,8 +237,8 @@
         scene.add(fillLight);
 
         // --- CAMERA ---
-        const camDist = 5.5;
-        camera.position.set(camDist * 0.3, camDist * 0.6, camDist * 0.7);
+        const camDist = 7;
+        camera.position.set(camDist * 0.3, camDist * 0.5, camDist * 0.8);
         camera.lookAt(0, 0, 0);
 
         // --- INTERACTION ---
@@ -287,6 +289,7 @@
                 const t = fanProgress;
                 p.position.x = d.stackX * (1 - t) + d.fanX * t;
                 p.position.y = d.stackY * (1 - t) + d.fanY * t;
+                p.position.z = (d.stackZ || 0) * (1 - t) + (d.fanZ || 0) * t;
                 p.rotation.z = d.stackRotZ * (1 - t) + d.fanRotZ * t;
                 p.rotation.y = d.stackRotY * (1 - t) + d.fanRotY * t;
             });
