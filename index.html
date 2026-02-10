@@ -182,15 +182,18 @@
             shadow.position.z = -PT / 2 - 0.002;
             photoGroup.add(shadow);
 
-            // Stack along Z with slight random X/Y offsets (messy pile look)
-            const messX = (Math.random() - 0.5) * 0.15;
-            const messY = (Math.random() - 0.5) * 0.1;
-            const messRot = (Math.random() - 0.5) * 0.06;
+            // Stack along Z with random offsets in all axes (natural pile)
+            const messX = (Math.random() - 0.5) * 0.25;
+            const messY = (Math.random() - 0.5) * 0.2;
+            const messRotX = (Math.random() - 0.5) * 0.08;
+            const messRotY = (Math.random() - 0.5) * 0.08;
+            const messRotZ = (Math.random() - 0.5) * 0.1;
             photoGroup.position.x = messX;
             photoGroup.position.y = messY;
             photoGroup.position.z = -i * 0.06;
-            photoGroup.rotation.z = messRot;
-            photoGroup.rotation.y = 0;
+            photoGroup.rotation.x = messRotX;
+            photoGroup.rotation.y = messRotY;
+            photoGroup.rotation.z = messRotZ;
 
             // Fan: 4x2 grid covering the view plane
             const col = i % 4;
@@ -204,13 +207,15 @@
                 stackX: messX,
                 stackY: messY,
                 stackZ: -i * 0.06,
-                stackRotZ: messRot,
-                stackRotY: 0,
+                stackRotX: messRotX,
+                stackRotY: messRotY,
+                stackRotZ: messRotZ,
                 fanX: fanX,
                 fanY: fanY,
                 fanZ: 0,
-                fanRotZ: 0,
+                fanRotX: 0,
                 fanRotY: 0,
+                fanRotZ: 0,
             };
 
             photos.push(photoGroup);
@@ -309,9 +314,10 @@
                 const t = fanProgress;
                 p.position.x = d.stackX * (1 - t) + d.fanX * t;
                 p.position.y = d.stackY * (1 - t) + d.fanY * t;
-                p.position.z = (d.stackZ || 0) * (1 - t) + (d.fanZ || 0) * t;
-                p.rotation.z = d.stackRotZ * (1 - t) + d.fanRotZ * t;
+                p.position.z = d.stackZ * (1 - t) + d.fanZ * t;
+                p.rotation.x = d.stackRotX * (1 - t) + d.fanRotX * t;
                 p.rotation.y = d.stackRotY * (1 - t) + d.fanRotY * t;
+                p.rotation.z = d.stackRotZ * (1 - t) + d.fanRotZ * t;
             });
 
             // Gentle float
