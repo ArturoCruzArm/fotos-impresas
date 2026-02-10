@@ -182,20 +182,29 @@
             shadow.position.z = -PT / 2 - 0.002;
             photoGroup.add(shadow);
 
-            // Stack position (stacked with slight offsets)
-            photoGroup.position.y = i * (PT + 0.005);
-            photoGroup.rotation.z = (Math.random() - 0.5) * 0.03;
-            photoGroup.rotation.y = (Math.random() - 0.5) * 0.02;
+            // Stack position (clean stack, no rotation to avoid clipping)
+            photoGroup.position.y = i * (PT + 0.008);
+            photoGroup.position.x = 0;
+            photoGroup.position.z = 0;
+            photoGroup.rotation.z = 0;
+            photoGroup.rotation.y = 0;
 
-            // Store original and fan target positions
+            // Fan: 4x2 grid covering the view plane
+            const col = i % 4;
+            const row = Math.floor(i / 4);
+            const gridW = PW * 1.05; // slight gap between columns
+            const gridH = PH * 1.05; // slight gap between rows
+            const fanX = (col - 1.5) * gridW;
+            const fanY = (row - 0.5) * -gridH;
+
             photoGroup.userData = {
-                stackY: i * (PT + 0.005),
-                stackRotZ: photoGroup.rotation.z,
-                stackRotY: photoGroup.rotation.y,
+                stackY: i * (PT + 0.008),
+                stackRotZ: 0,
+                stackRotY: 0,
                 stackX: 0,
                 stackZ: 0,
-                fanX: (i - PHOTO_COUNT / 2 + 0.5) * (PW + 0.15),
-                fanY: 0,
+                fanX: fanX,
+                fanY: fanY,
                 fanZ: 0,
                 fanRotZ: 0,
                 fanRotY: 0,
@@ -237,8 +246,10 @@
         scene.add(fillLight);
 
         // --- CAMERA ---
-        const camDist = 7;
-        camera.position.set(camDist * 0.3, camDist * 0.5, camDist * 0.8);
+        let camDist = 5;
+        const camBase = 5;
+        const camFan = 12;
+        camera.position.set(0, camDist * 0.3, camDist);
         camera.lookAt(0, 0, 0);
 
         // --- INTERACTION ---
@@ -269,7 +280,7 @@
             camera.position.multiplyScalar(e.deltaY > 0 ? 1.05 : 0.95);
             const d = camera.position.length();
             if (d < 2.5) camera.position.setLength(2.5);
-            if (d > 10) camera.position.setLength(10);
+            if (d > 18) camera.position.setLength(18);
         }, { passive: false });
 
         // --- ANIMATE ---
@@ -283,6 +294,12 @@
 
             // Fan animation
             fanProgress += (targetFanProgress - fanProgress) * 0.05;
+
+            // Smooth camera zoom for fan/stack
+            const targetCamDist = camBase * (1 - fanProgress) + camFan * fanProgress;
+            camDist += (targetCamDist - camDist) * 0.05;
+            const camDir = camera.position.clone().normalize();
+            camera.position.copy(camDir.multiplyScalar(camDist));
 
             photos.forEach((p, i) => {
                 const d = p.userData;
