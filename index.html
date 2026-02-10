@@ -71,85 +71,65 @@
         const PT = 0.02; // photo thickness
         const PHOTO_COUNT = 8;
 
-        // --- TEXTURES ---
-        const photoColors = [
-            '#ddd0f0', '#d0e8f0', '#f0d5d0', '#d0f0d8',
-            '#f0e0d0', '#d8d0f0', '#f0d0e0', '#d0f0f0'
-        ];
-        const photoLabels = [
-            'Ceremonia', 'Recepcion', 'Vals', 'Brindis',
-            'Familia', 'Amigas', 'Decoracion', 'Retrato'
+        // --- PHOTO FILES ---
+        const photoFiles = [
+            'fotos/foto1.jpg', 'fotos/foto2.jpg', 'fotos/foto3.jpg', 'fotos/foto4.jpg',
+            'fotos/foto5.jpg', 'fotos/foto6.jpg', 'fotos/foto7.jpg', 'fotos/foto8.jpg'
         ];
 
-        function createPhotoTexture(w, h, color, label, index) {
+        // Create photo texture with white border frame using real image
+        function createPhotoTexture(imgSrc, index) {
             const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
+            canvas.width = 512; canvas.height = 340;
             const ctx = canvas.getContext('2d');
+            const border = 16;
 
-            // White border (photo print)
+            // White photo paper
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillRect(0, 0, 512, 340);
 
-            // Image area
-            const border = 20;
-            ctx.fillStyle = color;
-            ctx.fillRect(border, border, w - border * 2, h - border * 2.5);
-
-            // Subtle gradient on image to simulate photo
-            const grad = ctx.createLinearGradient(border, border, w - border, h - border * 2.5);
-            grad.addColorStop(0, 'rgba(255,255,255,0.1)');
-            grad.addColorStop(0.5, 'rgba(0,0,0,0.05)');
-            grad.addColorStop(1, 'rgba(255,255,255,0.08)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(border, border, w - border * 2, h - border * 2.5);
-
-            // Photo placeholder icon
-            ctx.fillStyle = 'rgba(0,0,0,0.08)';
-            ctx.font = `${w * 0.15}px Georgia`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const icons = ['🏰', '🎉', '💃', '🥂', '👨‍👩‍👧', '👭', '🌸', '👸'];
-            ctx.fillText(icons[index] || '📷', w / 2, h * 0.4);
-
-            // Label at bottom
-            ctx.fillStyle = 'rgba(100,80,60,0.5)';
-            ctx.font = `${w * 0.04}px monospace`;
-            ctx.fillText(label, w / 2, h - border * 0.8);
-
-            // Number
+            // Number at bottom
             ctx.fillStyle = 'rgba(150,130,110,0.4)';
-            ctx.font = `${w * 0.03}px monospace`;
-            ctx.textAlign = 'right';
-            ctx.fillText(`${index + 1}/${PHOTO_COUNT}`, w - border, h - border * 0.8);
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText((index + 1) + '/' + PHOTO_COUNT + '  Producciones Foro 7', 256, 332);
 
-            return new THREE.CanvasTexture(canvas);
+            const tex = new THREE.CanvasTexture(canvas);
+
+            // Load real image and draw it inside the border
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, border, border, 512 - border * 2, 340 - border * 2 - 12);
+                tex.needsUpdate = true;
+            };
+            img.src = imgSrc;
+
+            return tex;
         }
 
-        function createBackTexture(w, h) {
+        function createBackTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
+            canvas.width = 512; canvas.height = 340;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#f8f5f0';
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillRect(0, 0, 512, 340);
 
-            // Subtle paper texture
             for (let i = 0; i < 500; i++) {
                 ctx.fillStyle = `rgba(${200+Math.random()*30},${195+Math.random()*30},${185+Math.random()*30},0.3)`;
-                ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+                ctx.fillRect(Math.random()*512, Math.random()*340, 2, 2);
             }
 
-            // Back stamp
             ctx.fillStyle = 'rgba(180,160,140,0.3)';
             ctx.textAlign = 'center';
             ctx.font = '14px monospace';
-            ctx.fillText('PRODUCCIONES FORO 7', w/2, h * 0.45);
+            ctx.fillText('PRODUCCIONES FORO 7', 256, 153);
             ctx.font = '10px monospace';
-            ctx.fillText('Papel Premium · 300 DPI', w/2, h * 0.55);
+            ctx.fillText('Papel Premium \u00B7 300 DPI', 256, 187);
 
             return new THREE.CanvasTexture(canvas);
         }
 
-        const backTex = createBackTexture(512, 340);
+        const backTex = createBackTexture();
 
         // --- CREATE PHOTOS ---
         const photosGroup = new THREE.Group();
@@ -158,7 +138,7 @@
         for (let i = 0; i < PHOTO_COUNT; i++) {
             const photoGroup = new THREE.Group();
 
-            const frontTex = createPhotoTexture(512, 340, photoColors[i], photoLabels[i], i);
+            const frontTex = createPhotoTexture(photoFiles[i], i);
 
             // Photo card (thin box)
             const cardGeo = new THREE.BoxGeometry(PW, PH, PT);
